@@ -2,6 +2,14 @@
   "name": "dsh-toolbox",
   "version": "0.2.1",
   "description": "DSH 工具箱：把不常改动的插件设置页从设置侧栏收进「工具箱」，需要时在原位展开。",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AsterionZephyr/dsh-toolbox.git"
+  },
+  "homepage": "https://github.com/AsterionZephyr/dsh-toolbox",
+  "bugs": {
+    "url": "https://github.com/AsterionZephyr/dsh-toolbox/issues"
+  },
   "type": "module",
   "main": "lib/index.js",
   "exports": {
