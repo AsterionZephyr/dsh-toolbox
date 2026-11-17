@@ -62,6 +62,9 @@ bench/behavior-test.cjs 共 9 条，覆盖：默认自动折叠、单页切换�
 
 - 插件已在运行中的 DSH 里被图包含：/plugins/events 的客户端图有 dsh-toolbox（rev 921a4663b66c）；
   /plugins/??dsh-toolbox/client.js 返回 200。说明 bundle 通道不需要"重启 DSH 才生效"。
+- 0.2.0 落地后（18:0x）再次复核：宿主已通过 HMR 重新组合，图 rev=e0f42e0642de，
+  dsh-toolbox 条目 rev=0d509f5ebac4；取回的 bundle 33290 B（本地 33221 B，差 69 B 为 sourceMappingURL 尾注），
+  内容含 pushLedgerChange / renderCount / markDirty / inject locale，确认运行中的宿主已经在发新代码。
 - 设置面板 UI 的 6 条交互验收**尚未完成**：Web GUI 需要进程级 token（未落盘，拿不到），
   桌面壳页面的 /plugins/events SSE 当前报 ERR_FAILED（图事件流断），当前已打开页面可能没收到插件更新。
 - 下一步（需要用户或正常环境）：刷新一次 DSH 窗口，打开 设置 → 工具箱，确认诊断块显示
