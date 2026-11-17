@@ -2,6 +2,9 @@
 
 仓库：<https://github.com/AsterionZephyr/dsh-toolbox>
 
+[![tests](https://github.com/AsterionZephyr/dsh-toolbox/actions/workflows/tests.yml/badge.svg)](https://github.com/AsterionZephyr/dsh-toolbox/actions/workflows/tests.yml)
+
+
 
 把**不常改动的插件设置页**从设置面板左侧导航收进一个「工具箱」页，需要时在工具箱里原位展开。
 侧栏只留核心页（通用 / 模型 / 插件 / 账户），插件页默认全部收纳。
