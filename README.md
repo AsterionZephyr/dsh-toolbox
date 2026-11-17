@@ -22,12 +22,18 @@ DSH 没有公开的「分组 / 收纳」扩展点：槽位**声明即渲染授�
 1. **侧栏折叠**：给 `SlotRegistry.prototype.entries` 包一层过滤器，只对
    `key === 'settings.section'` 剔除「已收纳」的 id。导航读 `entries()`，于是这些页
    从侧栏消失；内容渲染读 `entriesOfSlot()`，不受影响。
-2. **原位展开**：工具箱自己的条目声明子槽位 `toolbox.page`；展开某页时，把那一页
+2. **原位展开**：工具箱自己的条目声明子槽位 `dsh-toolbox.page`；展开某页时，把那一页
    **原本的组件连同它的 `locale` / `inject` / `store` 席位**重新注册进子槽位，
    再 `renderSlot` 出来。props 由槽位框架按原样组装，不伪造、不越权
-   （`toolbox.page` 的声明者就是工具箱自己）。
+   （`dsh-toolbox.page` 的声明者就是工具箱自己）。
 
 两条机制都可逆：插件卸载时还原原型、释放全部子槽位注册。
+
+## 0.2.2 全量审计修复
+
+- 安装脚本：兼容紧凑/多行/空容器 package.json（空容器不再产生尾逗号），写入前用 Test-Json 严格校验；卸载兼容无尾逗号末项；install.cmd 透传参数与退出码；悬空 junction 自动重建；默认 Target 改为脚本所在目录。
+- 运行时代码：先注册 settings.section 成功后才装 entries 过滤器，注册冲突时不会把设置页全部折叠；子槽位 key 改为 dsh-toolbox.page；inject 回调返回幂等 disposer；过滤器卸载后直通；cascade timer 合并清理；诊断缓存监听 storage；overrides 改 null 原型。
+- 回归 16/16；安全/性能/宿主三份审计见 docs/full-audit-2026-11-18.md、docs/full-audit-security.md、docs/full-audit-perf.md、docs/full-audit-host.md。
 
 ## 稳定性修复（0.2.1）
 
@@ -106,6 +112,7 @@ bundle 通道在运行中会被重新组合（0.2.2-rc.1 实测：宿主启动�
 
 ## 已知边界
 
+- **独占 store 的页展开会新建实例**：共享 store handle 会复用同一实例；若插件用 `store: () => handle` 的独占 factory，展开后的表单状态可能与侧栏页不同（这是槽位框架语义，不是数据丢失）。
 - **折叠只影响导航**：页面的注册本身不动；插件热重载/卸载后列表跟着重算。
 - **正在看的那一页被收起**时，内容仍留在面板里，但侧栏不再有高亮项；点别的导航即可。
 - 若某个页自己声明了子槽位（子槽位只能有一个声明者），无法重复声明，展开时显示
@@ -122,7 +129,7 @@ bundle 通道在运行中会被重新组合（0.2.2-rc.1 实测：宿主启动�
 | `cordis.patch.yml` | bundle patch：`insert` 一行 `id: toolbox / name: dsh-toolbox` |
 | `install.ps1` / `install.cmd` | 安装/卸载（复制 + junction + package.json 两行，幂等） |
 | `HANDOVER.md` | 交接文档：现状、机制、验证清单、回滚 |
-| `bench/` | Node 桩件基准台 + 13 条行为回归（不依赖 DSH） |
+| `bench/` | Node 桩件基准台 + 16 条行为回归（不依赖 DSH） |
 | `docs/` | 宿主源码调研、性能优化报告、复核记录、真机验证证据 |
 
 ## 回滚

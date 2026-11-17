@@ -7,7 +7,7 @@
 
 > 本节是接手后的**当前事实**；与下文冲突时以本节为准。
 
-- 版本 0.2.0，代码已进 git（基线提交 ece67d4，性能优化提交紧随其后）。
+- 版本 0.2.2，代码已进 git（基线提交 ece67d4，性能优化与审计修复随后提交）。
 - **首次加载不需要重启 DSH**：0.2.2-rc.1 的 bundle 通道在运行中会重新组合。已实测 `/plugins/events`
   的客户端图包含 `{"id":"dsh-toolbox","immediately":true}`，`/plugins/??dsh-toolbox/client.js` 返回 200。
   下文“只差重启 DSH”的说法作废。
@@ -24,6 +24,10 @@
 - 真机 UI 验收仍欠：Web GUI 需要进程级 token（未落盘，拿不到）；桌面壳当前 `/plugins/events` SSE 报
   ERR_FAILED，已打开页面可能没收到插件更新。**刷新一次 DSH 窗口**后按第 6 节逐条验收即可。
 - 宿主依赖新增：`_core` / `markDirty` 是私有实现（能力检测 + 回退）；`inject` 已加 `locale` 以订阅语言切换。
+- **0.2.2 全量审计修复**：install.ps1 兼容紧凑/空容器 JSON 并用 Test-Json 严格校验；
+  先注册 section 成功后才装过滤器（注册冲突不再把所有设置页折叠）；子槽位改名 dsh-toolbox.page；
+  inject 回调返回幂等 disposer；过滤器卸载直通；cascade timer 合并；诊断缓存跨标签页失效；
+  overrides 用 null 原型。回归 16/16，审计见 docs/full-audit-2026-11-18.md。
 - **0.2.1 稳定性修复**（2026-11-17 19:xx）：account 的 `settings.launcher` 条目崩溃会让左下角设置入口变成
   single 槽位死格；工具箱里任一被收纳页崩溃会让 `settings.section` 的 list 槽位 abdicate 整个工具箱 → 空白页。
   已加：priority 1 的兜底齿轮（account 正常时让位）、工具箱/展开页两层 Error Boundary、
@@ -109,18 +113,18 @@
 ### 4.3 原位展开：把自己的子槽位当成「插槽」
 
 - 代码：`hostSection()` `lib/client.js:282`、`unhostSection()` `:306`、`SectionHost` `:418`。
-- 工具箱条目注册时声明子槽位：`children: { 'toolbox.page': { kind:'list', scope:'root' } }`（`apply()` `:601`）。
+- 工具箱条目注册时声明子槽位：`children: { 'dsh-toolbox.page': { kind:'list', scope:'root' } }`（`apply()` `:601`）。
 - 展开时，把目标页 `StoredEntry` 的**组件与席位原样搬过去**：
-  `register({name:'toolbox.page', id, order, locale?, inject?, store?}, entry.component)`，
-  然后 `props.renderSlot('toolbox.page', {close}, {only:id})`。
-- 为什么合法：`toolbox.page` 的声明者就是工具箱自己，渲染授权成立；props 由槽位框架按注册声明组装，
+  `register({name:'dsh-toolbox.page', id, order, locale?, inject?, store?}, entry.component)`，
+  然后 `props.renderSlot('dsh-toolbox.page', {close}, {only:id})`。
+- 为什么合法：`dsh-toolbox.page` 的声明者就是工具箱自己，渲染授权成立；props 由槽位框架按注册声明组装，
   不是手工伪造（`inject` 会被框架以原样参数调用、`store` 由注册表按引用挂载）。
 - 拒绝内嵌的唯一情形：目标条目自己声明了 `children`（一个槽位只能有一个声明者）→ 卡片显示「这个页暂不能内嵌」，不崩。
 
 ### 4.4 卸载
 
 - 代码：`apply()` 里的 `ctx.effect` teardown（`:601` 起）。
-- 依次：释放全部 `toolbox.page` 注册 → 释放工具箱 section/icon 注册 → 还原 `entries` 原型 → 移除注入的 `<style>`。
+- 依次：释放全部 `dsh-toolbox.page` 注册 → 释放工具箱 section/icon 注册 → 还原 `entries` 原型 → 移除注入的 `<style>`。
 
 ## 5. 已验证 / 未验证
 
@@ -130,8 +134,8 @@
 - 桩件（stub）端到端：假 `SlotRegistry`（entries 在 prototype 上、register 会声明 children）+ 假 React + 假 DOM，跑通：
   1) 自动模式下核心页保留、`theme-palette/notifications/wechat` 从导航消失；
   2) 卡片列表数量正确（3 已收纳 / 4 在侧栏）；
-  3) 展开 → `toolbox.page` 出现该 id 的注册 → `renderSlot('toolbox.page', …, {only:'theme-palette'})` 被调用；
-  4) 卸载/折叠 → 子槽位注册被释放、`toolbox.page` 声明随之消失；
+  3) 展开 → `dsh-toolbox.page` 出现该 id 的注册 → `renderSlot('dsh-toolbox.page', …, {only:'theme-palette'})` 被调用；
+  4) 卸载/折叠 → 子槽位注册被释放、`dsh-toolbox.page` 声明随之消失；
   5) `全部收纳` 后导航只剩 toolbox；`全部放回` 恢复全部并写回 `prefs`。
 - 安装自检：依赖行、bundles 行、junction、patch 段清空、宿主/客户端入口文件都在。
 
@@ -139,7 +143,7 @@
 
 - 真实 DSH 里 bundle 能否激活、`dsh.client` 能否被发现并下发（`/plugins/dsh-toolbox/client.js`）。
 - 真实 `ctx.slots` 上过滤器能否装上（原型链 / Cordis 服务代理的行为）。诊断块里会直接写「已安装 / 未安装」。
-- 各插件页被重挂进 `toolbox.page` 后的真实渲染（尤其是带 `store` 的 `notifications`、带 `inject` 的 `workspace-mover-rescue`、
+- 各插件页被重挂进 `dsh-toolbox.page` 后的真实渲染（尤其是带 `store` 的 `notifications`、带 `inject` 的 `workspace-mover-rescue`、
   纯静态的 `wechat` / `better-sidebar` / `market` / `bili`）。
 - 视觉/交互（面板内边距、深色主题下的对比度、移动端条带）。
 

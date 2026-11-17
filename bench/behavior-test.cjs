@@ -1,5 +1,6 @@
 'use strict'
 const assert = require('node:assert')
+const fs = require('node:fs')
 const path = require('node:path')
 const { createHarness } = require('./stub.cjs')
 
@@ -61,16 +62,16 @@ test('切换 已收纳/在侧栏 立即改侧栏并写 localStorage', function (
   harness.restoreGlobals()
 })
 
-test('展开把原组件注册进 toolbox.page，卸载后释放', function () {
+test('展开把原组件注册进 dsh-toolbox.page，卸载后释放', function () {
   const harness = newHarness()
   harness.headFor('theme-palette').props.onClick()
   const hosted = harness.renderHosted()
   assert.ok(hosted.output, 'SectionHost rendered')
-  const registered = harness.raw('toolbox.page')
+  const registered = harness.raw('dsh-toolbox.page')
   assert.strictEqual(registered.length, 1, 'one hosted page')
   assert.strictEqual(registered[0].options.id, 'theme-palette')
   harness.runUnmount(hosted.cleanups)
-  assert.strictEqual(harness.raw('toolbox.page').length, 0, 'hosted page released on unmount')
+  assert.strictEqual(harness.raw('dsh-toolbox.page').length, 0, 'hosted page released on unmount')
   harness.disposePlugin()
   harness.restoreGlobals()
 })
@@ -161,8 +162,8 @@ test('被收纳页渲染崩溃只显示局部警告，不把工具箱条目打�
   const harness = createHarness({
     clientPath: CLIENT,
     slotRender: function (key, owner, opts) {
-      if (key !== 'toolbox.page') return null
-      const entry = harness.raw('toolbox.page').find(function (item) {
+      if (key !== 'dsh-toolbox.page') return null
+      const entry = harness.raw('dsh-toolbox.page').find(function (item) {
         return item.options.id === (opts && opts.only)
       })
       return entry ? { type: entry.component, props: {}, children: [] } : null
@@ -255,6 +256,44 @@ test('launcher 优先级：account 健康时胜出，abdicate 后兜底接管', 
   live = harness.slots.entriesOfSlot('settings.launcher')
   assert.strictEqual(live[0], fallback, 'fallback wins after account abdication')
   account()
+  harness.disposePlugin()
+  harness.restoreGlobals()
+})
+
+
+test('别家 wrapper 后装 entries 时，卸载后我们的过滤器彻底失效', function () {
+  const harness = newHarness()
+  const proto = Object.getPrototypeOf(harness.slots)
+  const ours = proto.entries
+  const wrapper = function (key) { return ours.call(this, key) }
+  proto.entries = wrapper
+  assert.ok(idsOf(harness.filtered()).indexOf('theme-palette') < 0, 'still filtered while installed')
+  harness.disposePlugin()
+  const visible = idsOf(harness.filtered())
+  assert.ok(visible.indexOf('theme-palette') >= 0, 'disposed filter must pass through')
+  proto.entries = ours.__dshToolboxOriginal || ours
+  harness.restoreGlobals()
+})
+
+
+test('package.json 与 client.js 的 PLUGIN_VERSION 一致', function () {
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'))
+  const source = fs.readFileSync(CLIENT, 'utf8')
+  const match = source.match(/const PLUGIN_VERSION = "([^"]+)"/)
+  assert.ok(match, 'PLUGIN_VERSION constant exists')
+  assert.strictEqual(match[1], pkg.version, 'version sources agree')
+})
+
+
+test('工具箱 section 注册失败时不能把设置页全部折叠掉（fail-safe）', function () {
+  const harness = createHarness({ clientPath: CLIENT, withCore: 'fail-section' })
+  harness.addPages(harness.defaultPages)
+  harness.flush()
+  const visible = idsOf(harness.filtered())
+  assert.ok(visible.indexOf('theme-palette') >= 0, 'third-party pages stay visible without toolbox entry')
+  assert.ok(!visible.some(function (id) { return id === 'toolbox' }), 'toolbox entry is absent')
+  const diag = JSON.parse(harness.storage.get('dsh-toolbox.diag.v1') || '[]')
+  assert.ok(diag.some(function (item) { return item.scope === 'section-register' }), 'registration failure recorded')
   harness.disposePlugin()
   harness.restoreGlobals()
 })

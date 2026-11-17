@@ -1,3 +1,4 @@
+#Requires -Version 7.0
 <#
   dsh-toolbox 安装/卸载脚本（幂等）。
 
@@ -19,7 +20,7 @@
 [CmdletBinding()]
 param(
   [string]$Source = $PSScriptRoot,
-  [string]$Target = 'F:\Record\AIdatabase\09-杂项\DSH环境\dsh-toolbox',
+  [string]$Target = $PSScriptRoot,
   [string]$Profile = (Join-Path $env:USERPROFILE '.dsh\profiles\desktop'),
   [switch]$Uninstall
 )
@@ -35,6 +36,11 @@ function Backup($path) {
   $to = $path + '.bak-toolbox-' + $stamp
   Copy-Item -LiteralPath $path -Destination $to -Force
   return $to
+}
+function Assert-Json([string]$text, [string]$what) {
+  # ConvertFrom-Json 会放过尾逗号；Test-Json 更严格，避免把 profile 写坏。
+  try { $null = $text | Test-Json -ErrorAction Stop }
+  catch { throw "$what 不是合法 JSON：$($_.Exception.Message)" }
 }
 
 $packageJson = Join-Path $Profile 'package.json'
@@ -52,9 +58,11 @@ if ($Uninstall) {
   }
   $text = Get-Content -LiteralPath $packageJson -Raw -Encoding utf8
   $before = $text
-  $text = [regex]::Replace($text, '(?m)^[ \t]*"dsh-toolbox"\s*:\s*"[^"]*",\r?\n', '')
-  $text = [regex]::Replace($text, '(?m)^[ \t]*"dsh-toolbox",\r?\n', '')
+  # 依赖行/数组项可能是最后一项，没有尾逗号；两种都要能删。
+  $text = [regex]::Replace($text, '(?m)^[ \t]*"dsh-toolbox"\s*:\s*"[^"]*",?\r?\n', '')
+  $text = [regex]::Replace($text, '(?m)^[ \t]*"dsh-toolbox",?\r?\n', '')
   if ($text -ne $before) {
+    Assert-Json $text '卸载后的 package.json'
     $bak = Backup $packageJson
     Set-Content -LiteralPath $packageJson -Value $text -Encoding utf8NoBOM -NoNewline
     Write-Host "已从 package.json 移除 dsh-toolbox 的依赖行与 bundles 行（备份：$bak）"
@@ -99,6 +107,11 @@ if (Test-Path -LiteralPath $link) {
     throw "$link 已存在但不是指向 $Target 的 junction，请先手工处理"
   }
 } else {
+  # Test-Path 对"目标已删除"的悬空 junction 返回 false；先清掉再建，否则 New-Item 会失败。
+  $dangling = Get-Item -LiteralPath $link -Force -ErrorAction SilentlyContinue
+  if ($dangling -and $dangling.LinkType -eq 'Junction') {
+    [System.IO.Directory]::Delete($link)
+  }
   New-Item -ItemType Junction -Path $link -Target $Target | Out-Null
   Write-Host "已建立 junction：$link -> $Target"
 }
@@ -108,16 +121,27 @@ $text = Get-Content -LiteralPath $packageJson -Raw -Encoding utf8
 $before = $text
 $linkSpec = 'link:' + ($Target -replace '\\', '/')
 
+$safeLink = $linkSpec.Replace('$', '$$')
 if ($text -notmatch '"dsh-toolbox"\s*:') {
-  $replacement = '$1    "dsh-toolbox": "' + $linkSpec + '",' + $NL
-  $text = [regex]::Replace($text, '("dependencies"\s*:\s*\{\r?\n)', $replacement, 1)
+  # 兼容多行/紧凑；空对象要省略尾逗号，否则会产生非法 JSON。
+  if ($text -match '"dependencies"\s*:\s*\{\s*\}') {
+    $text = [regex]::Replace($text, '("dependencies"\s*:\s*\{)\s*\}', '$1' + $NL + '    "dsh-toolbox": "' + $safeLink + '"' + $NL + '  }', 1)
+  } else {
+    $replacement = '$1' + $NL + '    "dsh-toolbox": "' + $safeLink + '",' + $NL
+    $text = [regex]::Replace($text, '("dependencies"\s*:\s*\{)\r?\n?', $replacement, 1)
+  }
 }
-if ($text -notmatch '(?m)^[ \t]*"dsh-toolbox",\s*$') {
-  $replacement2 = '$1        "dsh-toolbox",' + $NL
-  $text = [regex]::Replace($text, '("bundles"\s*:\s*\[\r?\n)', $replacement2, 1)
+if ($text -notmatch '(?m)^[ \t]*"dsh-toolbox",?\s*$') {
+  if ($text -match '"bundles"\s*:\s*\[\s*\]') {
+    $text = [regex]::Replace($text, '("bundles"\s*:\s*\[)\s*\]', '$1' + $NL + '        "dsh-toolbox"' + $NL + '      ]', 1)
+  } else {
+    $replacement2 = '$1' + $NL + '        "dsh-toolbox",' + $NL
+    $text = [regex]::Replace($text, '("bundles"\s*:\s*\[)\r?\n?', $replacement2, 1)
+  }
 }
 
 if ($text -ne $before) {
+  Assert-Json $text '安装后的 package.json'
   $bak = Backup $packageJson
   Set-Content -LiteralPath $packageJson -Value $text -Encoding utf8NoBOM -NoNewline
   Write-Host "已写入 package.json（备份：$bak）"
@@ -137,7 +161,9 @@ if (Test-Path -LiteralPath $patchFile) {
 }
 
 # ---- 5) 自检 ----
-$json = Get-Content -LiteralPath $packageJson -Raw -Encoding utf8 | ConvertFrom-Json
+$finalText = Get-Content -LiteralPath $packageJson -Raw -Encoding utf8
+Assert-Json $finalText '最终 package.json'
+$json = $finalText | ConvertFrom-Json
 $checks = [ordered]@{
   Dependency  = [bool]$json.dependencies.'dsh-toolbox'
   Bundles     = (@($json.dsh.profile.bundles) -contains 'dsh-toolbox')

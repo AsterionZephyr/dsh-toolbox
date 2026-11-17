@@ -129,6 +129,9 @@ function makeSlots(withCore) {
       return function () { record.listeners.delete(fn) }
     }
     register(options, component) {
+      if (this.failSection && options.name === 'settings.section' && options.id === 'toolbox') {
+        throw new Error('simulated duplicate toolbox section')
+      }
       this.registerCount += 1
       const record = this.ensure(options.name)
       const entry = {
@@ -186,10 +189,12 @@ function textOf(element) {
 function createHarness(options) {
   const clientPath = options.clientPath
   const withCore = options.withCore !== false
+  const failSection = options.withCore === 'fail-section'
   const storage = options.storage || new Map()
   const react = createReact(options.effects !== false)
   const Slots = makeSlots(withCore)
   const slots = new Slots()
+  slots.failSection = failSection
 
   const windowObject = {
     __ModuleLoader__: {

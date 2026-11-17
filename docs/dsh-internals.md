@@ -165,7 +165,7 @@ const shellInjected = () => ({
 | 1 | `savePrefs()` → `bump()`（`lib/client.js:112`） | 工具箱自己的 `useSyncExternalStore` 重渲染（**第 1 轮**，此时侧栏 rows 还是旧缓存） |
 | 2 | `nudgeLedger()`：register（version+1）→ dispose（version+1） | `markDirty` 同步 emit `slots/changed` ×2；微任务只排 1 次 flush |
 | 3 | 微任务 flush | ① 外壳 `subscribe` → uSES 重渲染 → getSnapshot 发现 version 变了 → `entries()`（走工具箱过滤器）→ rows 重算；② 工具箱 `ctx.slots.subscribe("settings.section")`（`lib/client.js:457`）→ `bump()` → **第 2 轮** |
-| 4 | 若展开/收起导致 `SectionHost` mount/unmount | 再加 1 次 register/dispose（`toolbox.page`）+ 微任务 flush + 页面组件挂载 |
+| 4 | 若展开/收起导致 `SectionHost` mount/unmount | 再加 1 次 register/dispose（`dsh-toolbox.page`）+ 微任务 flush + 页面组件挂载 |
 
 **结论**：一次折叠切换 = **工具箱至少 2 轮渲染 + 外壳 1 轮 rows 重算**，且每轮工具箱渲染都会 `readSections()`（排序 + 全部 label thunk，`lib/client.js:451`）。这是当前最明显的浪费点（见 §7）。
 
@@ -243,7 +243,7 @@ core.markDirty("settings.section", rec);         // version+1 → mutateListener
   - `store` 是**独占 factory**（`() => handle`）时：按 occurrence 新起实例（`:1730-1753`）→ 每次重挂都是新 store。
 - `locale`：注册时只存 namespace 字符串；渲染时 `localeSeat` 命中缓存（同 revision 返回同一个 `t`），首帧才 `face.bind(ns)`。
 
-### 4.2 子槽位 register 的成本（`toolbox.page` 这种"展开才注册"）
+### 4.2 子槽位 register 的成本（`dsh-toolbox.page` 这种"展开才注册"）
 
 单次 `ctx.slots.register(options, Comp)` 的真实开销（`dsh-client-ui-renderer/lib/client.js:1813-1815` → `:1602-1623` → SlotCore.register）：
 

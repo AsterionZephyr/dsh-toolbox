@@ -3,12 +3,12 @@
     "file": "client.js",
     "withCore": true,
     "filter": {
-      "nsPerCall": 127.84,
+      "nsPerCall": 56.86,
       "rawEntriesPerCall": 1,
       "labelCallsPerCall": 0
     },
     "render": {
-      "usPerRender": 8.93,
+      "usPerRender": 8.87,
       "rawEntriesPerRender": 0,
       "labelCallsPerRender": 0
     },
@@ -23,12 +23,12 @@
     "file": "client.js",
     "withCore": false,
     "filter": {
-      "nsPerCall": 84.56,
+      "nsPerCall": 81.18,
       "rawEntriesPerCall": 1,
       "labelCallsPerCall": 0
     },
     "render": {
-      "usPerRender": 9.06,
+      "usPerRender": 8.12,
       "rawEntriesPerRender": 0,
       "labelCallsPerRender": 0
     },

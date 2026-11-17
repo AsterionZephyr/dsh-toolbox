@@ -9,7 +9,7 @@
 | --- | --- |
 | stub.cjs | 桩件：window.__ModuleLoader__、localStorage、document、React hooks、按真实 SlotCore 语义实现的假 SlotRegistry（entries 稳定引用、register/dispose 版本+1、微任务合并通知、_core.markDirty） |
 | bench.cjs | 指标基准：filter / render / toggle，5 轮取中位数 |
-| behavior-test.cjs | 黑盒行为回归（9 条），node bench/behavior-test.cjs 退出码 0/1 |
+| behavior-test.cjs | 黑盒行为回归（16 条），node bench/behavior-test.cjs 退出码 0/1 |
 | results-baseline.json | ece67d4 基线数字 |
 | results-optimized.json | 优化后数字 |
 
