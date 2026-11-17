@@ -35,6 +35,11 @@ function createReact(effectsEnabled) {
       if (typeof cleanup === 'function') effects.push(cleanup)
     },
     useSyncExternalStore: function (subscribe, getSnapshot) { return getSnapshot() },
+    useLayoutEffect: function (fn) {
+      if (!state.enabled) return
+      const cleanup = fn()
+      if (typeof cleanup === 'function') effects.push(cleanup)
+    },
     useRef: function (init) { return { current: init } },
     useCallback: function (fn) { return fn },
     memo: function (component, compare) {
@@ -57,6 +62,7 @@ function makeSlots(withCore) {
       this.flushCount = 0
       this.flushScheduled = false
       this.rawEntriesCalls = 0
+      this.abdicated = new WeakSet()
       this.entryErrorListeners = new Set()
       this.ensure('settings.section')
       if (withCore) {
@@ -99,13 +105,21 @@ function makeSlots(withCore) {
       this.rawEntriesCalls += 1
       return this.rawEntries(key)
     }
-    entriesOfSlot(key) { return this.rawEntries(key) }
+    entriesOfSlot(key) {
+      const sorted = this.rawEntries(key).slice().sort(function (a, b) {
+        return (a.options.priority || 0) - (b.options.priority || 0) ||
+          (a.options.order || 0) - (b.options.order || 0)
+      }).filter((entry) => !this.abdicated.has(entry))
+      if (key === 'settings.launcher') return sorted.slice(0, 1)
+      return sorted
+    }
     getVersion(key) { const record = this.records.get(key); return record ? record.version : 0 }
     onEntryError(fn) {
       this.entryErrorListeners.add(fn)
       return () => this.entryErrorListeners.delete(fn)
     }
     reportEntryError(key, entry, error, info) {
+      if (info && info.abdicate) this.abdicated.add(entry)
       for (const listener of Array.from(this.entryErrorListeners)) listener(key, entry, error, info || {})
     }
     subscribe(key, fn) {

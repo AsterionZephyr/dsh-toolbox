@@ -236,4 +236,27 @@ test('工具箱条目被 abdicate 后会自动重注册（防空白页）', func
   harness.restoreGlobals()
 })
 
+
+test('launcher 优先级：account 健康时胜出，abdicate 后兜底接管', function () {
+  const harness = newHarness()
+  const fallback = harness.raw('settings.launcher').find(function (entry) {
+    return entry.options.priority === 1
+  })
+  assert.ok(fallback, 'fallback registered')
+  const account = harness.slots.register({
+    name: 'settings.launcher',
+    locale: 'settings.account',
+    inject: function () { return {} },
+  }, function AccountMenu() { return null })
+  harness.flush()
+  let live = harness.slots.entriesOfSlot('settings.launcher')
+  assert.strictEqual(live[0].options.priority, undefined, 'account priority 0 wins while healthy')
+  harness.slots.reportEntryError('settings.launcher', live[0], new Error('account crash'), { abdicate: true })
+  live = harness.slots.entriesOfSlot('settings.launcher')
+  assert.strictEqual(live[0], fallback, 'fallback wins after account abdication')
+  account()
+  harness.disposePlugin()
+  harness.restoreGlobals()
+})
+
 console.log('passed ' + passed + ' tests')

@@ -44,7 +44,7 @@ withCore=true/false 分别模拟真实宿主（ctx.slots._core 可用）与旧�
 
 | 指标 | 基线 | 优化后 |
 | --- | --- | --- |
-| entries 单次 | 1534–1655 ns | 66–120 ns |
+| entries 单次 | 1534–1655 ns | 65–130 ns |
 | 每次 entries 的原 entries 调用 | 2 | 1 |
 | 每次 entries 的 label thunk 调用 | 13 | 0 |
 | 渲染中 label thunk 调用 | 13 / 次 | 0 |

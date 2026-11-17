@@ -57,6 +57,10 @@ settings.section 是 **list** 槽位。renderer 对 list 槽位的条目崩溃�
   /plugins/events 的 dsh-toolbox 条目 rev 已换新，bundle 含 ToolboxBoundary / SettingsLauncherFallback / scheduleSectionHeal。
 - 截图复核未完成：检查时 DSH 窗口已被用户最小化，无法用 PrintWindow 取内容；
   按约定没有做任何桌面点击/恢复窗口操作。
+- **用户确认（2026-11-17 20:39）**：刷新后原 account 设置入口恢复，诊断块显示
+  「设置入口：宿主 account 入口」「最近异常：无」。用户提供的截图在会话里，不随仓库发布。
+- 注意：docs/verify/ 下的证据截图采集于 16:27–17:33，**不覆盖 0.2.1**；
+  0.2.1 的真机结论以上面的用户确认为准。
 
 ## 4. 仍待确认
 

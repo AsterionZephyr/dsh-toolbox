@@ -60,7 +60,7 @@ DSH 没有公开的「分组 / 收纳」扩展点：槽位**声明即渲染授�
 
 | 指标 | 基线 0.1.0 | 0.2.0 |
 | --- | --- | --- |
-| `entries('settings.section')` 单次 | 1534–1655 ns | 43–87 ns |
+| `entries('settings.section')` 单次 | 1534–1655 ns | 65–130 ns |
 | 每次原 `entries()` 调用 | 2 | 1 |
 | 每次 label thunk 调用 | 13 | 0 |
 | 一次切换的 version 增量 | 2 | 1（有 `_core`）/ 2（回退） |
@@ -119,7 +119,7 @@ bundle 通道在运行中会被重新组合（0.2.2-rc.1 实测：宿主启动�
 | `cordis.patch.yml` | bundle patch：`insert` 一行 `id: toolbox / name: dsh-toolbox` |
 | `install.ps1` / `install.cmd` | 安装/卸载（复制 + junction + package.json 两行，幂等） |
 | `HANDOVER.md` | 交接文档：现状、机制、验证清单、回滚 |
-| `bench/` | Node 桩件基准台 + 9 条行为回归（不依赖 DSH） |
+| `bench/` | Node 桩件基准台 + 13 条行为回归（不依赖 DSH） |
 | `docs/` | 宿主源码调研、性能优化报告、复核记录、真机验证证据 |
 
 ## 回滚

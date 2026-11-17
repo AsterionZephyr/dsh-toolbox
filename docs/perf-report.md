@@ -40,7 +40,7 @@ DSH 0.2.2-rc.1 的实现事实（详见 docs/dsh-internals.md）：
 
 | 指标 | 基线 | 优化后 |
 | --- | --- | --- |
-| entries('settings.section') 单次 | 1534–1655 ns | 43–87 ns |
+| entries('settings.section') 单次 | 1534–1655 ns | 65–130 ns |
 | 其中原 entries 调用 | 2 次 | 1 次 |
 | 其中 label thunk 调用 | 13 次 | 0 次 |
 | 渲染一次工具箱的 label thunk | 13 次 | 0 次 |
@@ -49,7 +49,7 @@ DSH 0.2.2-rc.1 的实现事实（详见 docs/dsh-internals.md）：
 | 一次切换的 register/dispose | 1/1 | 0/0（_core 可用）/ 1/1（回退） |
 | 一次切换的 toolbox 全量渲染 | 2 轮（savePrefs bump + 账本 flush） | 1 轮（仅账本 flush 引起的 shell 级联） |
 
-render 微基准（stub 里构建元素树，不代表真实 React 提交）：约 10.5 µs → 7–9 µs，趋势一致但绝对值不可外推。
+render 微基准（stub 里构建元素树，不代表真实 React 提交）：约 10.5 µs → 9 µs，趋势一致但绝对值不可外推。
 真实收益主要来自：过滤/标签/版本写操作减少 + 一次切换少一轮全量渲染 + 展开页不再被无关重渲染。
 
 ## 5. 行为回归
