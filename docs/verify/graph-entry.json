@@ -1,0 +1,13 @@
+{
+  "capturedAt": "2026-11-17T09:32:07.513Z",
+  "endpoint": "http://127.0.0.1:11412/plugins/events (auth-free route)",
+  "graphRev": "647fed981493",
+  "entryCount": 91,
+  "toolboxEntry": {
+    "id": "dsh-toolbox",
+    "url": "plugins/??dsh-toolbox/client.js&rev=921a4663b66c",
+    "rev": "921a4663b66c",
+    "immediately": true
+  },
+  "note": "entry 存在即说明宿主已把 dsh-toolbox 的 client bundle 组合进客户端启动图"
+}

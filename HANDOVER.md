@@ -3,6 +3,28 @@
 > 写于 2026-11-17 13:0x（会话 `session-1a299c2b`）；插件版本 0.1.0。
 > 读者：接手本插件的下一个 DSH 会话 / 人。读完这一篇就够了，不用重跑调研。
 
+## 0a. 接手更新（2026-11-17 18:xx，0.2.0 性能优化）
+
+> 本节是接手后的**当前事实**；与下文冲突时以本节为准。
+
+- 版本 0.2.0，代码已进 git（基线提交 ece67d4，性能优化提交紧随其后）。
+- **首次加载不需要重启 DSH**：0.2.2-rc.1 的 bundle 通道在运行中会重新组合。已实测 `/plugins/events`
+  的客户端图包含 `{"id":"dsh-toolbox","immediately":true}`，`/plugins/??dsh-toolbox/client.js` 返回 200。
+  下文“只差重启 DSH”的说法作废。
+- 性能优化（lib/client.js，详见 docs/perf-report.md）：
+  - 设置页列表按“账本数组引用 + getVersion + locale revision”缓存；过滤器复用已读账本，label 只在缓存失效时解析；
+  - 折叠集合按“页面列表 + 偏好版本”缓存，过滤器与渲染共用；
+  - 推版本号优先用 `ctx.slots._core.markDirty`（不注册假条目），私有字段缺失时自动回退旧路径；
+  - 偏好变更不再同步 `bump()`，依赖外壳 rows 重算级联渲染，一次切换少一轮全量渲染；带宏任务自愈检查；
+  - 展开页 `memo` 隔离；顺手清掉“放回侧栏后再次收纳自动展开”的残留状态；
+  - 诊断块新增“版本推送：markDirty / 占位条目回退”一行。
+- 行为回归：`node bench/behavior-test.cjs lib/client.js` 9/9 通过（基线在“再次收纳不自动展开”一条失败）。
+- 新增文件：`bench/`（桩件基准台 + 行为回归）、`docs/dsh-internals.md`（宿主源码调研）、
+  `docs/perf-review.md`（补丁复核）、`docs/perf-report.md`（性能报告）、`docs/verify/`（真机证据链）。
+- 真机 UI 验收仍欠：Web GUI 需要进程级 token（未落盘，拿不到）；桌面壳当前 `/plugins/events` SSE 报
+  ERR_FAILED，已打开页面可能没收到插件更新。**刷新一次 DSH 窗口**后按第 6 节逐条验收即可。
+- 宿主依赖新增：`_core` / `markDirty` 是私有实现（能力检测 + 回退）；`inject` 已加 `locale` 以订阅语言切换。
+
 ## 0. 一句话现状
 
 插件写完了，**已按 bundle 通道装进 desktop profile**，只差 **重启 DSH** 来完成首次加载；
@@ -34,8 +56,8 @@
 | profile 备份 | `C:\Users\Zephyr\.dsh\profiles\desktop\package.json.bak-toolbox-20261117-125428` |
 | 写进 profile 的东西 | `dependencies` 一行 `"dsh-toolbox": "link:F:/Record/AIdatabase/09-杂项/DSH环境/dsh-toolbox"`；`dsh.profile.bundles` 末尾一行 `"dsh-toolbox"` |
 | **没写**的东西 | profile 的 `cordis.patch.yml`（手工通道，写了就双重挂载） |
-| 首次加载 | **未生效——要重启 DSH**（bundle 层启动时组合） |
-| 运行验证 | 宿主/浏览器两侧都**还没在真机上看过**（见第 5 节） |
+| 首次加载 | 2026-11-17 已确认**运行中生效**（客户端图含 dsh-toolbox，无需重启；见 0a） |
+| 运行验证 | 宿主加载已确认；设置面板 6 条交互验收未完成（token / SSE 限制，见 0a、第 5 节） |
 
 插件文件：
 
@@ -107,7 +129,7 @@
   5) `全部收纳` 后导航只剩 toolbox；`全部放回` 恢复全部并写回 `prefs`。
 - 安装自检：依赖行、bundles 行、junction、patch 段清空、宿主/客户端入口文件都在。
 
-**未验证（重启后必须做，见第 6 节）**
+**未验证（截至 2026-11-17 18:00；刷新页面后按第 6 节验收）**
 
 - 真实 DSH 里 bundle 能否激活、`dsh.client` 能否被发现并下发（`/plugins/dsh-toolbox/client.js`）。
 - 真实 `ctx.slots` 上过滤器能否装上（原型链 / Cordis 服务代理的行为）。诊断块里会直接写「已安装 / 未安装」。
@@ -115,9 +137,18 @@
   纯静态的 `wechat` / `better-sidebar` / `market` / `bili`）。
 - 视觉/交互（面板内边距、深色主题下的对比度、移动端条带）。
 
+**2026-11-17 18:00 更新**
+
+- 已确认：宿主客户端图里有 dsh-toolbox，bundle 可取回 200；**不需要重启**。
+- 仍未确认：设置面板的 6 条交互（见 docs/verify/report.md 的逐条表）。原因：
+  1) Web GUI 的 token 是进程级一次性密钥，未落盘；pilot 只能停在 401 鉴权页。
+  2) 桌面壳页面当前 `/plugins/events` 连接失败（DevTools Console 成排 ERR_FAILED），
+     已打开的页面可能还没收到插件图更新。
+- 刷新一次 DSH 窗口即可重试；工具箱诊断块应显示“侧栏过滤器：已安装”“版本推送：markDirty（不写账本）”。
+
 ## 6. 重启后的验收清单（逐条勾）
 
-1. **重启 DSH**（关掉桌面端再开；bundle 层只在启动时组合）。
+1. **刷新 DSH 页面**（先 Ctrl+R；bundle 层运行中会重新组合，通常不必重启）。
 2. 打开任意会话 → 设置（`Mod+,`）。左侧导航应只剩：账户 / 通用 / 模型 / 插件 / **工具箱**。
 3. 点「工具箱」：应看到一行行插件页（宠物、微信、通知、主题配色、bili、workspace-mover、better-sidebar、dshmarket…），
    右侧按钮显示 `已收纳`；底部「诊断」里**侧栏过滤器 = 已安装**、模式 = 自动。
@@ -145,7 +176,7 @@ Test-Path 'F:\Record\AIdatabase\09-杂项\DSH环境\dsh-toolbox\lib\client.js'
 
 ```powershell
 pwsh -File 'F:\Record\AIdatabase\09-杂项\DSH环境\dsh-toolbox\install.ps1' -Uninstall
-# 然后重启 DSH
+# 然后刷新页面（必要时重启 DSH）
 ```
 
 卸载会：删 junction、删 `dependencies` 与 `bundles` 两行、（若历史上有）清掉 profile patch 里的工具箱段；

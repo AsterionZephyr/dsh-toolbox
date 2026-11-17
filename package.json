@@ -1,6 +1,6 @@
 {
   "name": "dsh-toolbox",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "DSH 工具箱：把不常改动的插件设置页从设置侧栏收进「工具箱」，需要时在原位展开。",
   "type": "module",
   "main": "lib/index.js",

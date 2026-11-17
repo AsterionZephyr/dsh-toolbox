@@ -1,0 +1,42 @@
+[
+  {
+    "file": "client.js",
+    "withCore": true,
+    "filter": {
+      "nsPerCall": 43.28,
+      "rawEntriesPerCall": 1,
+      "labelCallsPerCall": 0
+    },
+    "render": {
+      "usPerRender": 9.29,
+      "rawEntriesPerRender": 0,
+      "labelCallsPerRender": 0
+    },
+    "toggle": {
+      "versionDelta": 1,
+      "registerDelta": 0,
+      "disposeDelta": 0,
+      "visibleAfter": true
+    }
+  },
+  {
+    "file": "client.js",
+    "withCore": false,
+    "filter": {
+      "nsPerCall": 87.2,
+      "rawEntriesPerCall": 1,
+      "labelCallsPerCall": 0
+    },
+    "render": {
+      "usPerRender": 6.85,
+      "rawEntriesPerRender": 0,
+      "labelCallsPerRender": 0
+    },
+    "toggle": {
+      "versionDelta": 2,
+      "registerDelta": 1,
+      "disposeDelta": 1,
+      "visibleAfter": true
+    }
+  }
+]

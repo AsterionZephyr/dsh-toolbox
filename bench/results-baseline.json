@@ -1,0 +1,42 @@
+[
+  {
+    "file": "client.baseline.js",
+    "withCore": true,
+    "filter": {
+      "nsPerCall": 1534.42,
+      "rawEntriesPerCall": 2,
+      "labelCallsPerCall": 13
+    },
+    "render": {
+      "usPerRender": 10.69,
+      "rawEntriesPerRender": 1,
+      "labelCallsPerRender": 13
+    },
+    "toggle": {
+      "versionDelta": 2,
+      "registerDelta": 1,
+      "disposeDelta": 1,
+      "visibleAfter": true
+    }
+  },
+  {
+    "file": "client.baseline.js",
+    "withCore": false,
+    "filter": {
+      "nsPerCall": 1654.56,
+      "rawEntriesPerCall": 2,
+      "labelCallsPerCall": 13
+    },
+    "render": {
+      "usPerRender": 10.38,
+      "rawEntriesPerRender": 1,
+      "labelCallsPerRender": 13
+    },
+    "toggle": {
+      "versionDelta": 2,
+      "registerDelta": 1,
+      "disposeDelta": 1,
+      "visibleAfter": true
+    }
+  }
+]
