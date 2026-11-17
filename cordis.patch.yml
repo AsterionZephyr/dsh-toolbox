@@ -1,0 +1,8 @@
+# dsh-toolbox 的挂载声明。
+#
+# 宿主半边是空壳（只为占一个 Loader 条目），真正干活的是 lib/client.js：
+# 它给设置侧栏装一层过滤器，并注册「工具箱」这个 settings.section 页。
+- insert:
+    - id: toolbox
+      name: dsh-toolbox
+      config: {}
