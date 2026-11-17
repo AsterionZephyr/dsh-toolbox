@@ -23,6 +23,21 @@ DSH 没有公开的「分组 / 收纳」扩展点：槽位**声明即渲染授�
 
 两条机制都可逆：插件卸载时还原原型、释放全部子槽位注册。
 
+## 稳定性修复（0.2.1）
+
+针对两个实测症状：
+
+- **左下角设置入口消失**：account 插件的 settings.launcher 条目一旦渲染崩溃会被 renderer 标记 abdicate，
+  single 槽位于是显示空死格，设置入口不可达。0.2.1 以 priority 1 注册一个兜底齿轮：
+  account 正常时它不显示；account 崩溃/缺席时它接管，保证设置永远点得到。
+- **工具箱空白**：被收纳页或工具箱自身渲染崩溃会让 settings.section 的 list 槽位 abdicate 整个工具箱条目，
+  出现"导航有工具箱、内容空白"。0.2.1 给工具箱和每个展开页各加一层错误边界，
+  失败只显示局部警告+重试；另外监听 onEntryError，条目若仍被 abdicate 会自动重注册（限流）。
+
+诊断块新增「设置入口」和「最近异常」两行；错误同时写入浏览器 localStorage 的
+`dsh-toolbox.diag.v1`，可用 `dsh-toolbox.lastApply.v1` 确认 HMR 是否加载了新版本。
+细节与残留风险见 [docs/bugfix-0.2.1.md](docs/bugfix-0.2.1.md)。
+
 ## 性能（0.2.0）
 
 设置侧栏过滤与工具箱渲染原来的热路径是"每次调用都全量扫描账本 + 解析全部 label + 排序"，

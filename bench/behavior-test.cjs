@@ -156,4 +156,84 @@ test('插件卸载后过滤器撤销，侧栏恢复全部页', function () {
   harness.restoreGlobals()
 })
 
+
+test('被收纳页渲染崩溃只显示局部警告，不把工具箱条目打空', function () {
+  const harness = createHarness({
+    clientPath: CLIENT,
+    slotRender: function (key, owner, opts) {
+      if (key !== 'toolbox.page') return null
+      const entry = harness.raw('toolbox.page').find(function (item) {
+        return item.options.id === (opts && opts.only)
+      })
+      return entry ? { type: entry.component, props: {}, children: [] } : null
+    },
+  })
+  harness.addPages(harness.defaultPages)
+  harness.addPage('crash-page', 200, 'string', function () {
+    throw new Error('boom-from-hosted-page')
+  })
+  harness.flush()
+  harness.headFor('crash-page').props.onClick()
+  const hosted = harness.renderHosted()
+  const rendered = harness.renderDeep(hosted.output)
+  const warnings = require('./stub.cjs').find(rendered, function (element) {
+    return element.props && typeof element.props.className === 'string' &&
+      element.props.className.indexOf('dshtb-warn') === 0
+  })
+  assert.ok(warnings.length > 0, 'hosted page crash shows a warning')
+  assert.ok(
+    harness.raw('settings.section').some(function (entry) { return entry.options.id === 'toolbox' }),
+    'toolbox entry is still registered'
+  )
+  harness.disposePlugin()
+  harness.restoreGlobals()
+})
+
+test('settings.launcher 兜底已注册，account 崩溃时仍有设置入口', function () {
+  const harness = newHarness()
+  const launchers = harness.raw('settings.launcher')
+  assert.ok(launchers.length >= 1, 'fallback launcher registered')
+  const fallback = launchers.find(function (entry) { return entry.options.priority === 1 })
+  assert.ok(fallback, 'fallback has priority 1')
+  let opened = 0
+  const output = harness.renderDeep(fallback.component({
+    wide: true,
+    openSettings: function () { opened += 1 },
+  }))
+  const buttons = require('./stub.cjs').find(output, function (element) {
+    return element.type === 'button' && element.props && element.props['aria-label'] === '设置'
+  })
+  assert.strictEqual(buttons.length, 1, 'fallback renders a settings button')
+  buttons[0].props.onClick()
+  assert.strictEqual(opened, 1, 'fallback opens settings')
+  harness.disposePlugin()
+  harness.restoreGlobals()
+})
+
+
+test('工具箱条目被 abdicate 后会自动重注册（防空白页）', function () {
+  const harness = newHarness()
+  const before = harness.raw('settings.section').filter(function (entry) {
+    return entry.options.id === 'toolbox'
+  })[0]
+  assert.ok(before, 'toolbox initially registered')
+  const realSetTimeout = global.setTimeout
+  global.setTimeout = function (fn) {
+    try { fn() } catch (_) {}
+    return 0
+  }
+  try {
+    harness.slots.reportEntryError('settings.section', before, new Error('simulated crash'), { abdicate: true })
+  } finally {
+    global.setTimeout = realSetTimeout
+  }
+  const after = harness.raw('settings.section').filter(function (entry) {
+    return entry.options.id === 'toolbox'
+  })
+  assert.strictEqual(after.length, 1, 'exactly one toolbox entry after heal')
+  assert.notStrictEqual(after[0], before, 'entry was re-registered')
+  harness.disposePlugin()
+  harness.restoreGlobals()
+})
+
 console.log('passed ' + passed + ' tests')

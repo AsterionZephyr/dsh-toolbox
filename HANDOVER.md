@@ -24,6 +24,12 @@
 - 真机 UI 验收仍欠：Web GUI 需要进程级 token（未落盘，拿不到）；桌面壳当前 `/plugins/events` SSE 报
   ERR_FAILED，已打开页面可能没收到插件更新。**刷新一次 DSH 窗口**后按第 6 节逐条验收即可。
 - 宿主依赖新增：`_core` / `markDirty` 是私有实现（能力检测 + 回退）；`inject` 已加 `locale` 以订阅语言切换。
+- **0.2.1 稳定性修复**（2026-11-17 19:xx）：account 的 `settings.launcher` 条目崩溃会让左下角设置入口变成
+  single 槽位死格；工具箱里任一被收纳页崩溃会让 `settings.section` 的 list 槽位 abdicate 整个工具箱 → 空白页。
+  已加：priority 1 的兜底齿轮（account 正常时让位）、工具箱/展开页两层 Error Boundary、
+  `onEntryError` 自动重注册（限 3 次/分钟）、缺失 props 守卫、localStorage 诊断日志
+  （`dsh-toolbox.diag.v1` / `dsh-toolbox.lastApply.v1`）。回归 12/12；
+  详见 docs/bugfix-0.2.1.md。真机 UI 仍建议刷新一次后复核。
 
 ## 0. 一句话现状
 

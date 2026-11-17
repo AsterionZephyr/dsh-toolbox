@@ -67,6 +67,7 @@ bench/behavior-test.cjs 共 9 条，覆盖：默认自动折叠、单页切换�
   内容含 pushLedgerChange / renderCount / markDirty / inject locale，确认运行中的宿主已经在发新代码。
 - 设置面板 UI 的 6 条交互验收**尚未完成**：Web GUI 需要进程级 token（未落盘，拿不到），
   桌面壳页面的 /plugins/events SSE 当前报 ERR_FAILED（图事件流断），当前已打开页面可能没收到插件更新。
+- 0.2.1 稳定性补丁（错误边界 / 设置入口兜底 / 自愈）已通过 HMR 应用；详见 docs/bugfix-0.2.1.md。
 - 下一步（需要用户或正常环境）：刷新一次 DSH 窗口，打开 设置 → 工具箱，确认诊断块显示
   "侧栏过滤器：已安装"、"版本推送：markDirty（不写账本）"，再按 HANDOVER 第 6 节逐条验收。
 

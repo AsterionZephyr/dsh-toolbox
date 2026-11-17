@@ -13,7 +13,19 @@ function createReact(effectsEnabled) {
     else if (children.length > 1) p.children = children
     return { type: type, props: p, children: children }
   }
+  class Component {
+    constructor(props) {
+      this.props = props || {}
+      this.state = {}
+    }
+    setState(partial) {
+      const next = typeof partial === 'function' ? partial(this.state, this.props) : partial
+      this.state = Object.assign({}, this.state, next)
+    }
+  }
+  Component.prototype.isReactComponent = {}
   const React = {
+    Component: Component,
     createElement: createElement,
     useState: function (init) { return [typeof init === 'function' ? init() : init, function () {}] },
     useEffect: function (fn) {
@@ -45,6 +57,7 @@ function makeSlots(withCore) {
       this.flushCount = 0
       this.flushScheduled = false
       this.rawEntriesCalls = 0
+      this.entryErrorListeners = new Set()
       this.ensure('settings.section')
       if (withCore) {
         const self = this
@@ -86,8 +99,15 @@ function makeSlots(withCore) {
       this.rawEntriesCalls += 1
       return this.rawEntries(key)
     }
-    entriesOfSlot(key) { return this.entries(key) }
+    entriesOfSlot(key) { return this.rawEntries(key) }
     getVersion(key) { const record = this.records.get(key); return record ? record.version : 0 }
+    onEntryError(fn) {
+      this.entryErrorListeners.add(fn)
+      return () => this.entryErrorListeners.delete(fn)
+    }
+    reportEntryError(key, entry, error, info) {
+      for (const listener of Array.from(this.entryErrorListeners)) listener(key, entry, error, info || {})
+    }
     subscribe(key, fn) {
       const record = this.ensure(key)
       record.listeners.add(fn)
@@ -212,12 +232,12 @@ function createHarness(options) {
 
   pluginExports.apply(ctx)
 
-  function addPage(id, order, labelKind) {
+  function addPage(id, order, labelKind, component) {
     const label = labelKind === 'string' ? id.toUpperCase() : function () {
       labelCalls.count += 1
       return id.toUpperCase()
     }
-    slots.register({ name: 'settings.section', id: id, order: order, label: label }, function () { return null })
+    slots.register({ name: 'settings.section', id: id, order: order, label: label }, component || function () { return null })
   }
   function addPages(pages) {
     for (const page of pages) addPage(page[0], page[1], page[2] || 'thunk')
@@ -235,13 +255,23 @@ function createHarness(options) {
   function renderToolbox() {
     const entry = toolboxEntry()
     if (!entry) throw new Error('toolbox section is not registered')
-    return entry.component({
+    let element = entry.component({
       api: {
         ctx: function () { return ctx },
         filterInstalled: function () { return true },
       },
-      renderSlot: function () { return null },
+      renderSlot: options.slotRender || function () { return null },
     })
+    // ToolboxShell 用 class 错误边界包住 ToolboxSection；桩里手动剥掉这一层，
+    // 拿到 ToolboxSection 的元素树，方便继续找卡片/按钮/展开的 SectionHost。
+    if (element && element.type && element.type.prototype && element.type.prototype.isReactComponent) {
+      const instance = new element.type(element.props)
+      element = instance.render()
+      if (element && typeof element.type === 'function' && !(element.type.prototype && element.type.prototype.isReactComponent)) {
+        element = element.type(element.props)
+      }
+    }
+    return element
   }
   function filtered() { return slots.entries('settings.section') }
   function cardFor(id) {
@@ -310,6 +340,34 @@ function createHarness(options) {
     for (const listener of Array.from(localeListeners)) listener()
   }
 
+  function renderDeep(node) {
+    if (node === null || node === undefined || typeof node !== 'object') return node
+    if (Array.isArray(node)) return node.map(renderDeep)
+    const type = node.type
+    if (typeof type === 'function') {
+      const isClass = type.prototype && type.prototype.isReactComponent
+      if (isClass) {
+        const instance = new type(node.props)
+        try {
+          return renderDeep(instance.render())
+        } catch (error) {
+          if (typeof type.getDerivedStateFromError === 'function') {
+            instance.state = Object.assign({}, instance.state, type.getDerivedStateFromError(error))
+          }
+          if (typeof instance.componentDidCatch === 'function') instance.componentDidCatch(error)
+          return renderDeep(instance.render())
+        }
+      }
+      return renderDeep(type(node.props))
+    }
+    if (typeof type === 'string') {
+      const props = Object.assign({}, node.props)
+      if (props.children !== undefined) props.children = renderDeep(props.children)
+      return { type: type, props: props, children: props.children }
+    }
+    return node
+  }
+
   const harness = {
     clientPath: clientPath,
     slots: slots,
@@ -328,6 +386,7 @@ function createHarness(options) {
     headFor: headFor,
     toolbarButton: toolbarButton,
     renderHosted: renderHosted,
+    renderDeep: renderDeep,
     runUnmount: runUnmount,
     disposePlugin: disposePlugin,
     setLocaleRevision: setLocaleRevision,
